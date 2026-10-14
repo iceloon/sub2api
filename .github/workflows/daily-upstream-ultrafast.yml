@@ -23,6 +23,7 @@ concurrency:
 env:
   UPSTREAM_REPO: Wei-Shaw/sub2api
   UPSTREAM_BRANCH: main
+  FEATURE_BRANCH: feature/openai-ultrafast
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/sub2api
 
 jobs:
@@ -32,7 +33,7 @@ jobs:
       - name: Checkout fork
         uses: actions/checkout@v6
         with:
-          ref: main
+          ref: feature/openai-ultrafast
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,7 +86,7 @@ jobs:
             git commit -m "feat: keep OpenAI Ultrafast group billing after upstream sync"
           fi
           git commit --allow-empty -m "upstream-sync: ${{ steps.changes.outputs.upstream_sha }}"
-          git push origin HEAD:main
+          git push origin HEAD:"${FEATURE_BRANCH}"
 
       - name: Login to GHCR
         if: steps.changes.outputs.should_build == 'true'
