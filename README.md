@@ -280,6 +280,29 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 
 ### Method 2: Docker Compose (Recommended)
 
+This fork's Compose files use `iceloon/sub2api:ultrafast`, which includes the group-level OpenAI Ultrafast billing switch. Build that image from this repository, or use the image published by the daily sync workflow as `ghcr.io/iceloon/sub2api:ultrafast`.
+
+```bash
+git clone https://github.com/iceloon/sub2api.git
+cd sub2api
+docker build -t iceloon/sub2api:ultrafast .
+cd deploy
+cp .env.example .env
+chmod 600 .env
+# Fill POSTGRES_PASSWORD, JWT_SECRET, and TOTP_ENCRYPTION_KEY with `openssl rand -hex 32`.
+mkdir -p data postgres_data redis_data
+docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml logs -f sub2api
+```
+
+Open `http://127.0.0.1:8080`. Set `BIND_HOST=127.0.0.1` in `.env` to listen only on localhost. If the admin account is left empty, the first start prints it in the logs.
+
+Enable Ultrafast from the OpenAI group editor: "Bill as Ultrafast (6x)". New requests pick it up after saving; existing WebSocket sessions must reconnect.
+
+The upstream one-click script still downloads `weishaw/sub2api:latest`. Do not use it for this fork.
+
+### Method 2b: Upstream Docker Compose script (not this fork)
+
 Deploy with Docker Compose, including PostgreSQL and Redis containers.
 
 #### Prerequisites

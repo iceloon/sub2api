@@ -1,0 +1,112 @@
+name: Daily upstream Ultrafast image
+
+on:
+  schedule:
+    # 每天 02:17 UTC 检查上游。分钟错开整点，减少 GitHub 定时任务拥堵。
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: Build even when upstream has no new commits
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: daily-upstream-ultrafast
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: Wei-Shaw/sub2api
+  UPSTREAM_BRANCH: main
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/sub2api
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch upstream "${UPSTREAM_BRANCH}" --tags
+          git rev-parse HEAD
+          git rev-parse "upstream/${UPSTREAM_BRANCH}"
+
+      - name: Detect upstream changes
+        id: changes
+        env:
+          FORCE_BUILD: ${{ inputs.force_build }}
+        run: |
+          upstream_sha="$(git rev-parse "upstream/${UPSTREAM_BRANCH}")"
+          last_sha="$(git log -1 --format=%H --grep='^upstream-sync:' || true)"
+          if [[ -n "$last_sha" ]]; then
+            last_upstream="$(git show -s --format=%B "$last_sha" | sed -n 's/^upstream-sync: //p' | head -1)"
+          else
+            last_upstream=""
+          fi
+          echo "upstream_sha=$upstream_sha" >> "$GITHUB_OUTPUT"
+          echo "last_upstream=$last_upstream" >> "$GITHUB_OUTPUT"
+          if [[ "$FORCE_BUILD" == "true" || -z "$last_upstream" || "$last_upstream" != "$upstream_sha" ]]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Merge upstream and keep Ultrafast changes
+        if: steps.changes.outputs.should_build == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 先保留本仓库改动。冲突时记录文件，合并后用补丁脚本把 Ultrafast 关键点补回。
+          if ! git merge "upstream/${UPSTREAM_BRANCH}" --no-edit -X ours; then
+            conflicted="$(git diff --name-only --diff-filter=U)"
+            printf '%s\n' "$conflicted"
+            if [[ -n "$conflicted" ]]; then
+              git checkout --ours -- $conflicted
+            fi
+            git add -A
+            git commit -m "merge: keep local Ultrafast changes over upstream conflicts"
+          fi
+          python3 .github/scripts/apply_ultrafast_patch.py
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "feat: keep OpenAI Ultrafast group billing after upstream sync"
+          fi
+          git commit --allow-empty -m "upstream-sync: ${{ steps.changes.outputs.upstream_sha }}"
+          git push origin HEAD:main
+
+      - name: Login to GHCR
+        if: steps.changes.outputs.should_build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        if: steps.changes.outputs.should_build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:ultrafast
+            ${{ env.IMAGE_NAME }}:ultrafast-${{ steps.changes.outputs.upstream_sha }}
+          build-args: |
+            GOPROXY=https://goproxy.cn,direct
+            GOSUMDB=sum.golang.google.cn
+            NPM_CONFIG_REGISTRY=https://registry.npmmirror.com
+            COMMIT=${{ steps.changes.outputs.upstream_sha }}

@@ -2167,7 +2167,13 @@ func TestAstraUltrafastPricingUsesSixTimesStandard(t *testing.T) {
 	}
 	p, err := svc.GetModelPricing("gpt-6-sol")
 	require.NoError(t, err)
-	require.Equal(t, 2.0, configuredServiceTierMultiplier("ultrafast", p))
+	require.Equal(t, 6.0, configuredServiceTierMultiplier("ultrafast", p))
+	p, err = svc.GetModelPricing("gpt-6.1-sol")
+	require.NoError(t, err)
+	require.Equal(t, 6.0, configuredServiceTierMultiplier("ultrafast", p))
+	p, err = svc.GetModelPricing("gpt-6-luna")
+	require.NoError(t, err)
+	require.Equal(t, 6.0, configuredServiceTierMultiplier("ultrafast", p))
 }
 
 func TestGPT61SolExplicitZeroCacheWriteAcrossTiers(t *testing.T) {

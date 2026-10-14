@@ -1271,7 +1271,9 @@ export default {
         force: '强制使用 Fast（priority）',
         hint: '开启后，此分组的 OpenAI 请求会强制写入 service_tier=priority；全局 Fast/Flex 策略仍可过滤或拦截。保存后新请求立即生效，已建立的 WebSocket 会话需重连。',
         free: '免费 Fast',
-        freeHint: '该分组的 Fast 请求仍使用 priority 档位，但客户实际费用按同一请求的 Standard 价格计算。'
+        freeHint: '该分组的 Fast 请求仍使用 priority 档位，但客户实际费用按同一请求的 Standard 价格计算。',
+        ultrafast: '按 Ultrafast 计费（6 倍）',
+        ultrafastHint: '开启后，此分组的 OpenAI 请求会写入 service_tier=ultrafast，并按 Ultrafast（标准价 6 倍）计费。即使上游响应回 default，也不会降回 Standard。与强制 Fast 同时开启时，以 Ultrafast 为准。'
       },
       invalidRequestFallback: {
         title: '无效请求兜底分组',

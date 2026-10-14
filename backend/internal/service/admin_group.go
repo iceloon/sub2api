@@ -363,6 +363,7 @@ func sanitizeGroupOpenAIFast(group *Group) {
 		if group != nil {
 			group.ForceOpenAIFast = false
 			group.FreeOpenAIFast = false
+			group.ForceOpenAIUltrafast = false
 		}
 	}
 }
@@ -617,6 +618,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		AllowLive:                       input.AllowLive,
 		ForceOpenAIFast:                 input.ForceOpenAIFast,
 		FreeOpenAIFast:                  input.FreeOpenAIFast,
+		ForceOpenAIUltrafast:            input.ForceOpenAIUltrafast,
 		RequireOAuthOnly:                input.RequireOAuthOnly,
 		RequirePrivacySet:               input.RequirePrivacySet,
 		DefaultMappedModel:              input.DefaultMappedModel,
@@ -1005,6 +1007,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	if input.FreeOpenAIFast != nil {
 		group.FreeOpenAIFast = *input.FreeOpenAIFast
+	}
+	if input.ForceOpenAIUltrafast != nil {
+		group.ForceOpenAIUltrafast = *input.ForceOpenAIUltrafast
 	}
 	if input.RequireOAuthOnly != nil {
 		group.RequireOAuthOnly = *input.RequireOAuthOnly

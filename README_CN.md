@@ -306,6 +306,29 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 
 ### 方式二：Docker Compose（推荐）
 
+本仓库的 Compose 默认使用 `iceloon/sub2api:ultrafast`，包含分组 OpenAI Ultrafast 计费。镜像不会从上游 `weishaw/sub2api` 拉取，需要先在本仓库构建，或使用每日同步 Action 推到 GHCR 的 `ghcr.io/iceloon/sub2api:ultrafast`。
+
+```bash
+git clone https://github.com/iceloon/sub2api.git
+cd sub2api
+docker build -t iceloon/sub2api:ultrafast .
+cd deploy
+cp .env.example .env
+chmod 600 .env
+openssl rand -hex 32  # 分别填入 POSTGRES_PASSWORD、JWT_SECRET、TOTP_ENCRYPTION_KEY
+mkdir -p data postgres_data redis_data
+docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml logs -f sub2api
+```
+
+访问 `http://127.0.0.1:8080`。如需只监听本机，在 `.env` 中设置 `BIND_HOST=127.0.0.1`。管理员账号留空时，首次启动会写到日志。
+
+开启 Ultrafast：管理后台编辑 OpenAI 分组，打开“按 Ultrafast 计费（6 倍）”。保存后新请求生效，已有 WebSocket 需要重连。
+
+上游 `Wei-Shaw/sub2api` 的一键脚本仍会下载官方 `weishaw/sub2api:latest`，不要用它部署本 fork。
+
+### 方式二：Docker Compose（上游脚本，不用于本 fork）
+
 使用 Docker Compose 部署，包含 PostgreSQL 和 Redis 容器。
 
 #### 前置条件

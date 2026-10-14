@@ -2037,6 +2037,14 @@ func openAIFastPolicySettingsFromContext(ctx context.Context) *OpenAIFastPolicyS
 	return nil
 }
 
+func openAIGroupForcesUltrafast(ctx context.Context, account *Account) bool {
+	if ctx == nil || account == nil || account.Platform != PlatformOpenAI {
+		return false
+	}
+	group, _ := ctx.Value(ctxkey.Group).(*Group)
+	return IsGroupContextValid(group) && groupSupportsOpenAIFast(group.Platform) && group.ForceOpenAIUltrafast
+}
+
 func openAIGroupForcesFast(ctx context.Context, account *Account) bool {
 	if ctx == nil || account == nil || account.Platform != PlatformOpenAI {
 		return false
@@ -2064,7 +2072,13 @@ func (s *OpenAIGatewayService) applyOpenAIFastPolicyToBody(ctx context.Context, 
 	if len(body) == 0 {
 		return body, nil
 	}
-	if openAIGroupForcesFast(ctx, account) {
+	if openAIGroupForcesUltrafast(ctx, account) {
+		updated, err := sjson.SetBytes(body, "service_tier", OpenAIFastTierUltrafast)
+		if err != nil {
+			return body, fmt.Errorf("force group service_tier ultrafast on body: %w", err)
+		}
+		body = updated
+	} else if openAIGroupForcesFast(ctx, account) {
 		updated, err := sjson.SetBytes(body, "service_tier", OpenAIFastTierPriority)
 		if err != nil {
 			return body, fmt.Errorf("force group service_tier priority on body: %w", err)
@@ -2190,7 +2204,13 @@ func (s *OpenAIGatewayService) applyOpenAIFastPolicyToWSResponseCreate(
 	if frameType != "response.create" {
 		return frame, nil, nil
 	}
-	if openAIGroupForcesFast(ctx, account) {
+	if openAIGroupForcesUltrafast(ctx, account) {
+		updated, err := sjson.SetBytes(frame, "service_tier", OpenAIFastTierUltrafast)
+		if err != nil {
+			return frame, nil, fmt.Errorf("force group service_tier ultrafast in ws frame: %w", err)
+		}
+		frame = updated
+	} else if openAIGroupForcesFast(ctx, account) {
 		updated, err := sjson.SetBytes(frame, "service_tier", OpenAIFastTierPriority)
 		if err != nil {
 			return frame, nil, fmt.Errorf("force group service_tier priority in ws frame: %w", err)

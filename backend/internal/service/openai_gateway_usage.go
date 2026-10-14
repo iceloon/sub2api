@@ -133,6 +133,16 @@ func openAIUsagePricingAt(input *OpenAIRecordUsageInput) time.Time {
 	return timezone.Now()
 }
 
+func groupBillsOpenAIUltrafast(apiKey *APIKey, account *Account) bool {
+	if apiKey == nil || apiKey.Group == nil || !apiKey.Group.ForceOpenAIUltrafast {
+		return false
+	}
+	if account == nil || !account.IsOpenAI() {
+		return false
+	}
+	return groupSupportsOpenAIFast(apiKey.Group.Platform)
+}
+
 func groupBillsOpenAIFastAtStandard(apiKey *APIKey, account *Account, serviceTier string) bool {
 	if apiKey == nil || apiKey.Group == nil || !apiKey.Group.FreeOpenAIFast {
 		return false
@@ -175,7 +185,14 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	if !isGrokVideoUsageResult(result, nil) {
 		ApplyOpenAIImageBillingResolution(result)
 	}
-	logServiceTierBillingDowngrade("service.openai_gateway", account, result.RequestID, ApplyOpenAIServiceTierBillingResolution(billingAccount, result))
+	resolution := ApplyOpenAIServiceTierBillingResolution(billingAccount, result)
+	logServiceTierBillingDowngrade("service.openai_gateway", account, result.RequestID, resolution)
+	// 分组 Ultrafast 是计费策略，不是上游是否真正提供该档位的声明。
+	// 上游回 default 时不能把费用降回 Standard，否则开关对当前这类中转账号无效。
+	if groupBillsOpenAIUltrafast(apiKey, billingAccount) {
+		tier := OpenAIFastTierUltrafast
+		result.ServiceTier = &tier
+	}
 
 	// OpenAI input_tokens 是总输入，包含缓存读取和缓存写入明细。
 	// 将三类 token 拆成互斥桶，避免缓存写入同时按普通输入和 cache_write 重复计费。

@@ -28,6 +28,8 @@ describe("groupsOpenAIFast", () => {
       hint: expect.stringContaining("service_tier=priority"),
       free: expect.any(String),
       freeHint: expect.stringContaining("Standard"),
+      ultrafast: expect.stringContaining("Ultrafast"),
+      ultrafastHint: expect.stringContaining("ultrafast"),
     });
     expect(en.groups.openaiFast).toMatchObject({
       title: expect.any(String),
@@ -35,6 +37,8 @@ describe("groupsOpenAIFast", () => {
       hint: expect.stringContaining("service_tier=priority"),
       free: expect.any(String),
       freeHint: expect.stringContaining("Standard"),
+      ultrafast: expect.stringContaining("Ultrafast"),
+      ultrafastHint: expect.stringContaining("6x"),
     });
   });
 });
