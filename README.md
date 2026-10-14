@@ -166,6 +166,46 @@ docker build -t iceloon/sub2api:ultrafast .
 docker compose -f docker-compose.local.yml up -d --no-deps --force-recreate sub2api
 ```
 
+## 生产环境切换
+
+从官方 `weishaw/sub2api:latest` 换到本分支时，不创建新库，不导入数据，不重建 PostgreSQL。继续使用原来的 `postgres_data`、`data`、`POSTGRES_PASSWORD`、`JWT_SECRET` 和 `TOTP_ENCRYPTION_KEY`。
+
+`ADMIN_EMAIL` 和 `ADMIN_PASSWORD` 只在 `users` 表为空时创建第一个管理员。已有用户时会跳过，不会覆盖现有密码。不要把生产 Compose 改成另一套密码或另一个空数据目录，否则会连到新库，看起来像原数据被清空。
+
+禁止：
+
+- `docker compose down -v`
+- 删除或更换 `postgres_data`、`data`
+- 同时启动旧 Compose 和新 Compose。两边使用同一个 `8080`、同名容器和同一份数据库目录时会冲突，也会让两套程序同时写库。
+
+切换：
+
+```bash
+# 在生产 deploy 目录执行
+cp docker-compose.yml docker-compose.yml.bak.$(date +%Y%m%d%H%M%S)
+cp -a postgres_data postgres_data.bak.$(date +%Y%m%d%H%M%S)
+cp -a data data.bak.$(date +%Y%m%d%H%M%S)
+
+# 只改应用镜像，postgres 和 redis 的 volume、密码、容器名保持不动
+# image: weishaw/sub2api:latest
+# 改为：
+# image: iceloon/sub2api:ultrafast
+
+docker compose stop sub2api
+docker compose up -d
+docker compose ps
+curl -fsS http://127.0.0.1:8080/health
+```
+
+启动后确认旧管理员、账号、分组和用量还在。程序会自动执行：
+
+```sql
+ALTER TABLE groups
+    ADD COLUMN IF NOT EXISTS force_openai_ultrafast BOOLEAN NOT NULL DEFAULT FALSE;
+```
+
+该字段默认关闭。旧分组继续按原来的 Standard 或 Fast 计费，只有在后台打开「按 Ultrafast 计费（6 倍）」后，新请求才按 6 倍计费。
+
 ## 使用 Ultrafast
 
 1. 用管理员账号打开后台。
