@@ -309,7 +309,7 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 本仓库的 Compose 默认使用 `iceloon/sub2api:ultrafast`，包含分组 OpenAI Ultrafast 计费。镜像不会从上游 `weishaw/sub2api` 拉取，需要先在本仓库构建，或使用每日同步 Action 推到 GHCR 的 `ghcr.io/iceloon/sub2api:ultrafast`。
 
 ```bash
-git clone https://github.com/iceloon/sub2api.git
+git clone -b feature/openai-ultrafast https://github.com/iceloon/sub2api.git
 cd sub2api
 docker build -t iceloon/sub2api:ultrafast .
 cd deploy

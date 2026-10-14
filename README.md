@@ -283,7 +283,7 @@ curl -sSL https://raw.githubusercontent.com/Wei-Shaw/sub2api/main/deploy/install
 This fork's Compose files use `iceloon/sub2api:ultrafast`, which includes the group-level OpenAI Ultrafast billing switch. Build that image from this repository, or use the image published by the daily sync workflow as `ghcr.io/iceloon/sub2api:ultrafast`.
 
 ```bash
-git clone https://github.com/iceloon/sub2api.git
+git clone -b feature/openai-ultrafast https://github.com/iceloon/sub2api.git
 cd sub2api
 docker build -t iceloon/sub2api:ultrafast .
 cd deploy
